@@ -1,0 +1,21 @@
+.command-line {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  &__input-label {
+    margin-bottom: 10px;
+  }
+
+  &__input {
+    width: 100%;
+    max-width: 300px;
+    min-height: 130px;
+    font-size: 16px;
+    resize: none;
+  }
+
+  &__error {
+    color: red;
+  }
+}
