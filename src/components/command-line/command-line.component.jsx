@@ -7,7 +7,7 @@ const CommandLine = ({ getPaintCommands }) => {
   const commandTypes = [
     {
       type: 'C',
-      params: ['with', 'height'],
+      params: ['width', 'height'],
     },
     {
       type: 'L',
@@ -30,6 +30,35 @@ const CommandLine = ({ getPaintCommands }) => {
   const handleCommandInput = ({ target: { value } }) => {
     setEnteredCommands(value);
   };
+
+  const lintParam = useCallback((commandType, paramName, value, stringNum) => {
+    const lintResult = {
+      isValid: true,
+      paramValidValue: value,
+    };
+    // Because this param describe fill in bucket fill command
+    if (commandType === 'B' && paramName === 'c') {
+      return { ...lintResult };
+    }
+
+    const isParamNum = Number(value);
+    if (!isParamNum) {
+      setError(
+        `Error in line ${stringNum}: Parameter ${paramName} in command ${commandType} is not number`
+      );
+      return { ...lintResult, isValid: false };
+    }
+
+    const isParamInteger = Number.isInteger(isParamNum);
+    if (!isParamInteger) {
+      setError(
+        `Error in line ${stringNum}: Parameter ${paramName} in command ${commandType} is not integer number`
+      );
+      return { ...lintResult, isValid: false };
+    }
+
+    return { ...lintResult, paramValidValue: Number(value) };
+  }, []);
 
   const getCommand = useCallback(
     (command, stringNum) => {
@@ -82,37 +111,8 @@ const CommandLine = ({ getPaintCommands }) => {
 
       return readyCommand.isValid ? readyCommand : undefined;
     },
-    [commandTypes]
+    [commandTypes, lintParam]
   );
-
-  const lintParam = (commandType, paramName, value, stringNum) => {
-    const lintResult = {
-      isValid: true,
-      paramValidValue: value,
-    };
-    // Because this param describe fill in bucket fill command
-    if (commandType === 'B' && paramName === 'c') {
-      return { ...lintResult };
-    }
-
-    const isParamNum = Number(value);
-    if (!isParamNum) {
-      setError(
-        `Error in line ${stringNum}: Parameter ${paramName} in command ${commandType} is not number`
-      );
-      return { ...lintResult, isValid: false };
-    }
-
-    const isParamInteger = Number.isInteger(isParamNum);
-    if (!isParamInteger) {
-      setError(
-        `Error in line ${stringNum}: Parameter ${paramName} in command ${commandType} is not integer number`
-      );
-      return { ...lintResult, isValid: false };
-    }
-
-    return { ...lintResult, paramValidValue: Number(value) };
-  };
 
   const getExecutionCommands = useCallback(() => {
     // Dividing text on commands, parse by new line symbols
@@ -126,7 +126,7 @@ const CommandLine = ({ getPaintCommands }) => {
     // Check whether all commands are valid
     const isExecutionCommandsValid = executionCommands.every(command => command !== undefined);
 
-    return isExecutionCommandsValid ? executionCommands : undefined;
+    return isExecutionCommandsValid ? executionCommands : [];
   }, [enteredCommands, getCommand]);
 
   useEffect(() => {
@@ -138,7 +138,6 @@ const CommandLine = ({ getPaintCommands }) => {
 
     // Get ready to execution commands from textarea
     const paintCommands = getExecutionCommands();
-    console.log(paintCommands);
     getPaintCommands(paintCommands);
 
     // Set commands state at paint component
