@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import './command-line.styles.scss';
 
-const CommandLine = () => {
+const CommandLine = ({ getPaintCommands }) => {
   // Available commands for execution and they params
   const commandTypes = [
     {
@@ -24,81 +24,75 @@ const CommandLine = () => {
   ];
 
   const [error, setError] = useState(null);
-  const [commands, setCommands] = useState(`C 20 4`);
+  const [enteredCommands, setEnteredCommands] = useState(`C 20 4`);
 
   // Handle writing in command textarea
   const handleCommandInput = ({ target: { value } }) => {
-    setCommands(value);
+    setEnteredCommands(value);
   };
 
-  const getExecutionCommands = () => {
-    // Dividing text on commands, parse by new line symbols
-    const commandsArr = commands.trim().split(/\r?\n/);
+  const getCommand = useCallback(
+    (command, stringNum) => {
+      // Command type must always be the first character, make command params as another array
+      const [commandType, ...commandParamsArr] = command.trim().split(/\s+/);
 
-    const executionCommands = commandsArr.map((command, stringNum) => {
-      // Get object with command params from this function
-      return getCommand(command, stringNum + 1);
-    });
+      // Check if typed command type is valid and get command description
+      const commandDescription = commandTypes.find(
+        command => command.type.toUpperCase() === commandType.toUpperCase()
+      );
 
-    // Check whether all commands are valid
-    const isExecutionCommandsValid = executionCommands.every(command => command !== undefined);
+      if (!commandDescription) {
+        setError(`Error in line ${stringNum}: Not correct command type`);
+        return undefined;
+      }
 
-    return isExecutionCommandsValid ? executionCommands : undefined;
-  };
+      // Check if we have all the parameters for the command
+      const isAllParamsGiven = commandDescription.params.length === commandParamsArr.length;
 
-  const getCommand = (command, stringNum) => {
-    // Command type must always be the first character, make command params as another array
-    const [commandType, ...commandParamsArr] = command.trim().split(/\s+/);
+      if (!isAllParamsGiven) {
+        setError(`Error in line ${stringNum}: Not correct parameters count`);
+        return undefined;
+      }
 
-    // Check if typed command type is valid and get command description
-    const commandDescription = commandTypes.find(
-      command => command.type.toUpperCase() === commandType.toUpperCase()
-    );
+      // Convert our command from params array in object, parsing command description params
+      const readyCommand = commandDescription.params.reduce(
+        (accum, paramName, index) => {
+          // Get command type from our commend description
+          const { type: commandType } = commandDescription;
 
-    if (!commandDescription) {
-      setError(`Error in line ${stringNum}: Not correct command type`);
-      return undefined;
-    }
-
-    // Check if we have all the parameters for the command
-    const isAllParamsGiven = commandDescription.params.length === commandParamsArr.length;
-
-    if (!isAllParamsGiven) {
-      setError(`Error in line ${stringNum}: Not correct parameters count`);
-      return undefined;
-    }
-
-    // Convert our command from params array in object, parsing command description params
-    const readyCommand = commandDescription.params.reduce(
-      (accum, paramName, index) => {
-        // Get command type from our commend description
-        const { type: commandType } = commandDescription;
-
-        /*
+          /*
           Get parameter value from entered params,
           because we parse params names in command description
           index of the parameter name in description === parameter value index in entered params array
         */
-        const paramValue = commandParamsArr[index];
+          const paramValue = commandParamsArr[index];
 
-        // Check if we have right parameter value, add validation field in command object;
-        const paramsValid = lintParam(commandType, paramName, paramValue, stringNum);
-        return {
-          ...accum,
-          paramsValid,
-          [paramName]: paramsValid ? paramValue : undefined,
-        };
-      },
-      { type: commandDescription.type }
-    );
+          // Check if we have right parameter value, add validation field in command object;
+          const paramValidation = lintParam(commandType, paramName, paramValue, stringNum);
+          const { isValid, paramValidValue } = paramValidation;
 
-    return readyCommand.paramsValid ? readyCommand : undefined;
-  };
+          return {
+            ...accum,
+            isValid,
+            [paramName]: isValid ? paramValidValue : undefined,
+          };
+        },
+        { type: commandDescription.type }
+      );
+
+      return readyCommand.isValid ? readyCommand : undefined;
+    },
+    [commandTypes]
+  );
 
   const lintParam = (commandType, paramName, value, stringNum) => {
+    const lintResult = {
+      isValid: true,
+      paramValidValue: value,
+    };
     // Because this param describe fill in bucket fill command
     if (commandType === 'B' && paramName === 'c') {
-      return true;
+      return { ...lintResult };
     }
 
     const isParamNum = Number(value);
@@ -106,7 +100,7 @@ const CommandLine = () => {
       setError(
         `Error in line ${stringNum}: Parameter ${paramName} in command ${commandType} is not number`
       );
-      return false;
+      return { ...lintResult, isValid: false };
     }
 
     const isParamInteger = Number.isInteger(isParamNum);
@@ -114,22 +108,41 @@ const CommandLine = () => {
       setError(
         `Error in line ${stringNum}: Parameter ${paramName} in command ${commandType} is not integer number`
       );
-      return false;
+      return { ...lintResult, isValid: false };
     }
 
-    return isParamNum && isParamInteger;
+    return { ...lintResult, paramValidValue: Number(value) };
   };
+
+  const getExecutionCommands = useCallback(() => {
+    // Dividing text on commands, parse by new line symbols
+    const commandsArr = enteredCommands.trim().split(/\r?\n/);
+
+    // Get array of objects with command params
+    const executionCommands = commandsArr.map((command, stringNum) => {
+      return getCommand(command, stringNum + 1);
+    });
+
+    // Check whether all commands are valid
+    const isExecutionCommandsValid = executionCommands.every(command => command !== undefined);
+
+    return isExecutionCommandsValid ? executionCommands : undefined;
+  }, [enteredCommands, getCommand]);
 
   useEffect(() => {
     if (error) {
       setError(null);
     }
 
-    if (!commands.length) return;
+    if (!enteredCommands.length) return;
 
     // Get ready to execution commands from textarea
-    getExecutionCommands();
-  }, [commands]);
+    const paintCommands = getExecutionCommands();
+    console.log(paintCommands);
+    getPaintCommands(paintCommands);
+
+    // Set commands state at paint component
+  }, [error, enteredCommands.length, getExecutionCommands, getPaintCommands]);
 
   return (
     <div className="command-line">
@@ -139,7 +152,7 @@ const CommandLine = () => {
       <textarea
         className="command-line__input"
         id="command-line"
-        value={commands}
+        value={enteredCommands}
         onChange={handleCommandInput}
       />
       {error && <p className="command-line__error">{error}</p>}
@@ -147,4 +160,4 @@ const CommandLine = () => {
   );
 };
 
-export default CommandLine;
+export default React.memo(CommandLine);
