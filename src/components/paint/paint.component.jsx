@@ -12,6 +12,7 @@ class Paint extends Component {
     paintCommands: [],
     canvas: [],
     canvasParams: { width: 0, height: 0 },
+    drawSymbol: 'x',
   };
 
   setError = errorText => {
@@ -63,6 +64,7 @@ class Paint extends Component {
       paintCommands,
       canvasParams: { width: canvasWidth, height: canvasHeight },
       error,
+      drawSymbol,
     } = this.state;
 
     let { canvas } = this.state;
@@ -108,13 +110,34 @@ class Paint extends Component {
       const lineType = x1 === x2 ? 'vertical' : 'horizontal';
 
       if (lineType === 'vertical') {
-        drawVerticalLine('v', x1, y1, y2);
+        drawVerticalLine(drawSymbol, x1, y1, y2);
       } else {
-        drawHorizontalLine('h', y1, x1, x2);
+        drawHorizontalLine(drawSymbol, y1, x1, x2);
       }
     };
 
-    const drawRectangle = params => {};
+    const drawRectangle = ({ x1, y1, x2, y2 }) => {
+      // TODO: Make checking coords as own function
+      const isCoordsXInCanvas = isCoordsInCanvas('x', x1, x2);
+      const isCoordsYInCanvas = isCoordsInCanvas('y', y1, y2);
+
+      if (!(isCoordsXInCanvas && isCoordsYInCanvas)) {
+        errorInPaint = 'Rectangle coords is not in canvas area';
+        return;
+      }
+
+      canvas = canvas.map((row, rowNumber) => {
+        if (rowNumber === y1 - 1 || rowNumber === y2 - 1) {
+          return row.fill(drawSymbol, x1 - 1, x2);
+        }
+
+        if (rowNumber >= y1 && rowNumber < y2 - 1) {
+          return row.fill(drawSymbol, x1 - 1, x1).fill(drawSymbol, x2 - 1, x2);
+        }
+
+        return row;
+      });
+    };
 
     const bucketFill = params => {};
 
