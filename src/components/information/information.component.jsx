@@ -2,18 +2,18 @@ import React from 'react';
 
 const Information = () => {
   return (
-    <p>
-      Available commands and they params:
-      <br />
-      C w h
-      <br />
-      L x1 y1 x2 y2
-      <br />
-      R x1 y1 x2 y2
-      <br />
-      B x y c
-      <br />
-    </p>
+    <section className="alert alert-primary">
+      <p>Available commands and they parameters:</p>
+      <p>
+        <b>Canvas:</b> C w h
+        <br />
+        <b>Line:</b> L x1 y1 x2 y2
+        <br />
+        <b>Rectangle:</b> R x1 y1 x2 y2
+        <br />
+        <b>Bucket fill:</b> B x y c
+      </p>
+    </section>
   );
 };
 
