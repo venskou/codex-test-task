@@ -1,23 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import uuid from 'uuid';
 
 import './artboard.component.scss';
 
 const Artboard = ({ canvasData }) => {
-  const renderCells = cells =>
-    cells.map((cell, index) => (
-      <div className="artboard__cell" key={index}>
-        {cell ? cell : index}
+  const renderColumn = column =>
+    column.map(cell => (
+      <div className="artboard__cell" key={uuid.v1()}>
+        {cell && <span>{cell}</span>}
       </div>
     ));
 
   const renderCanvas = canvas =>
-    canvas.map((cells, index) => (
-      <div className="artboard__row" key={index}>
-        {renderCells(cells)}
+    canvas.map(column => (
+      <div className="artboard__column" key={uuid.v1()}>
+        {renderColumn(column)}
       </div>
     ));
 
-  return <div className="artboard">{canvasData.length && renderCanvas(canvasData)}</div>;
+  return (
+    <div>
+      {canvasData.length ? (
+        <div className="artboard">{canvasData.length && renderCanvas(canvasData)}</div>
+      ) : null}
+    </div>
+  );
 };
 
 export default Artboard;

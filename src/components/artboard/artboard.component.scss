@@ -1,21 +1,26 @@
 .artboard {
   margin-top: 40px;
   border: 1px solid #000;
-  display: inline-block;
-  vertical-align: top;
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
 
-  &__row {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
+  &__column {
+    & + .artboard__column {
+      border-left: 1px solid #000;
+    }
   }
 
   &__cell {
-    width: 40px;
-    height: 40px;
-    line-height: 40px;
+    width: 70px;
+    height: 70px;
+    line-height: 70px;
     text-align: center;
     vertical-align: middle;
     flex-shrink: 0;
+
+    & + .artboard__cell {
+      border-top: 1px solid #000;
+    }
   }
 }
