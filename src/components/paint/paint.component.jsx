@@ -16,11 +16,13 @@ class Paint extends Component {
   setError = errorText => {
     this.setState({
       error: errorText ? errorText : null,
+      canvas: [],
+      canvasParams: { width: 0, height: 0 },
     });
   };
 
   // method that used for state lifting from command-line component
-  getPaintCommands = paintCommands => {
+  setPaintCommands = paintCommands => {
     this.setState({
       paintCommands,
     });
@@ -96,8 +98,7 @@ class Paint extends Component {
         return;
       }
 
-      const isCoordsInverse = checkIsCoordsInverse({ x1, y1, x2, y2 });
-
+      const isCoordsInverse = checkIsCoordsInverse(x1, y1, x2, y2);
       const lineType = x1 === x2 ? 'vertical' : 'horizontal';
 
       let lineStart;
@@ -257,7 +258,7 @@ class Paint extends Component {
           <Information />
         </div>
         <div className="col-4">
-          <CommandLine getPaintCommands={this.getPaintCommands} setError={this.setError} />
+          <CommandLine setPaintCommands={this.setPaintCommands} setError={this.setError} />
           <button onClick={this.executeCommands} className="btn btn-primary" disabled={error}>
             Paint
           </button>
