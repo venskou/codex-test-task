@@ -1,68 +1,107 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { Component } from 'react';
 
 import './command-line.styles.scss';
 
-const CommandLine = ({ getPaintCommands }) => {
-  // Available commands for execution and they params
-  const commandTypes = [
-    {
-      type: 'C',
-      params: ['width', 'height'],
-    },
-    {
-      type: 'L',
-      params: ['x1', 'y1', 'x2', 'y2'],
-    },
-    {
-      type: 'R',
-      params: ['x1', 'y1', 'x2', 'y2'],
-    },
-    {
-      type: 'B',
-      params: ['x', 'y', 'c'],
-    },
-  ];
+const commandTypes = [
+  {
+    type: 'C',
+    params: ['width', 'height'],
+  },
+  {
+    type: 'L',
+    params: ['x1', 'y1', 'x2', 'y2'],
+  },
+  {
+    type: 'R',
+    params: ['x1', 'y1', 'x2', 'y2'],
+  },
+  {
+    type: 'B',
+    params: ['x', 'y', 'c'],
+  },
+];
 
-  const [error, setError] = useState(null);
-  const [enteredCommands, setEnteredCommands] = useState(`C 20 4`);
-
-  // Handle writing in command textarea
-  const handleCommandInput = ({ target: { value } }) => {
-    setEnteredCommands(value);
+class CommandLine extends Component {
+  state = {
+    // Default commands from test task
+    enteredCommands: `C 20 4
+L 1 2 6 2
+L 6 3 6 4
+R 16 1 20 3
+B 10 3 o
+`,
   };
 
-  const lintParam = useCallback((commandType, paramName, value, stringNum) => {
-    const lintResult = {
-      isValid: true,
-      paramValidValue: value,
+  handleCommandsInput = ({ target }) => {
+    this.setState(
+      {
+        enteredCommands: target.value,
+      },
+      this.getExecutionCommands
+    );
+  };
+
+  getExecutionCommands = () => {
+    const { enteredCommands } = this.state;
+    const { setError, setPaintCommands } = this.props;
+
+    setError(null);
+
+    if (!enteredCommands.trim().length) {
+      setPaintCommands([]);
+      return;
+    }
+
+    const lintParam = (commandType, paramName, value, stringNum) => {
+      const { setError } = this.props;
+
+      const lintResult = {
+        isValid: true,
+        paramValidValue: value,
+      };
+
+      // Because this param describe fill command
+      if (commandType === 'B' && paramName === 'c') {
+        if (value.length > 1) {
+          setError(
+            `Error in line ${stringNum}: Parameter ${paramName} in command ${commandType} must be only one symbol`
+          );
+          return { ...lintResult, isValid: false };
+        }
+
+        return { ...lintResult };
+      }
+
+      const numParam = Number(value);
+      if (!numParam && numParam > 0) {
+        setError(
+          `Error in line ${stringNum}: Parameter ${paramName} in command ${commandType} is not number`
+        );
+        return { ...lintResult, isValid: false };
+      }
+
+      if (!numParam) {
+        setError(`Error in line ${stringNum}: Parameter ${paramName} cannot be a zero`);
+        return { ...lintResult, isValid: false };
+      }
+
+      if (numParam < 0) {
+        setError(`Error in line ${stringNum}: Parameter ${paramName} cannot be a negative`);
+        return { ...lintResult, isValid: false };
+      }
+
+      const isParamInteger = Number.isInteger(numParam);
+      if (!isParamInteger) {
+        setError(
+          `Error in line ${stringNum}: Parameter ${paramName} in command ${commandType} is not integer number`
+        );
+        return { ...lintResult, isValid: false };
+      }
+
+      return { ...lintResult, paramValidValue: Number(value) };
     };
-    // Because this param describe fill in bucket fill command
-    if (commandType === 'B' && paramName === 'c') {
-      return { ...lintResult };
-    }
 
-    const isParamNum = Number(value);
-    if (!isParamNum) {
-      setError(
-        `Error in line ${stringNum}: Parameter ${paramName} in command ${commandType} is not number`
-      );
-      return { ...lintResult, isValid: false };
-    }
-
-    const isParamInteger = Number.isInteger(isParamNum);
-    if (!isParamInteger) {
-      setError(
-        `Error in line ${stringNum}: Parameter ${paramName} in command ${commandType} is not integer number`
-      );
-      return { ...lintResult, isValid: false };
-    }
-
-    return { ...lintResult, paramValidValue: Number(value) };
-  }, []);
-
-  const getCommand = useCallback(
-    (command, stringNum) => {
-      // Command type must always be the first character, make command params as another array
+    const getCommand = (command, stringNum) => {
       const [commandType, ...commandParamsArr] = command.trim().split(/\s+/);
 
       // Check if typed command type is valid and get command description
@@ -110,12 +149,8 @@ const CommandLine = ({ getPaintCommands }) => {
       );
 
       return readyCommand.isValid ? readyCommand : undefined;
-    },
-    [commandTypes, lintParam]
-  );
+    };
 
-  const getExecutionCommands = useCallback(() => {
-    // Dividing text on commands, parse by new line symbols
     const commandsArr = enteredCommands.trim().split(/\r?\n/);
 
     // Get array of objects with command params
@@ -125,38 +160,31 @@ const CommandLine = ({ getPaintCommands }) => {
 
     // Check whether all commands are valid
     const isExecutionCommandsValid = executionCommands.every(command => command !== undefined);
+    const commands = isExecutionCommandsValid ? executionCommands : [];
+    setPaintCommands(commands);
+  };
 
-    return isExecutionCommandsValid ? executionCommands : [];
-  }, [enteredCommands, getCommand]);
-
-  useEffect(() => {
-    if (error) {
-      setError(null);
+  componentDidMount() {
+    const { enteredCommands } = this.state;
+    if (enteredCommands.length) {
+      this.getExecutionCommands();
     }
+  }
 
-    if (!enteredCommands.length) return;
-
-    // Get ready to execution commands from textarea
-    const paintCommands = getExecutionCommands();
-    getPaintCommands(paintCommands);
-
-    // Set commands state at paint component
-  }, [error, enteredCommands.length, getExecutionCommands, getPaintCommands]);
-
-  return (
-    <div className="command-line">
-      <label className="command-line__input-label" htmlFor="command-line">
-        Enter your commands here:
-      </label>
-      <textarea
-        className="command-line__input"
-        id="command-line"
-        value={enteredCommands}
-        onChange={handleCommandInput}
-      />
-      {error && <p className="command-line__error">{error}</p>}
-    </div>
-  );
-};
+  render() {
+    const { enteredCommands } = this.state;
+    return (
+      <div className="form-group">
+        <label htmlFor="command-line">Enter your commands here:</label>
+        <textarea
+          className="form-control command-line"
+          id="command-line"
+          value={enteredCommands}
+          onChange={this.handleCommandsInput}
+        />
+      </div>
+    );
+  }
+}
 
 export default React.memo(CommandLine);
